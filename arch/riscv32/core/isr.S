@@ -9,6 +9,7 @@
 #include <linker/sections.h>
 #include <kernel_structs.h>
 #include <offsets_short.h>
+#include <kernel_arch_thread.h>
 
 /* imports */
 GDATA(_sw_isr_table)
@@ -31,6 +32,7 @@ GTEXT(z_sys_trace_isr_enter)
 
 #ifdef CONFIG_IRQ_OFFLOAD
 GTEXT(_offload_routine)
+GTEXT(z_irq_get_offload)
 #endif
 
 /* exports */
@@ -161,7 +163,7 @@ is_syscall:
 	 * Increment saved MEPC by 4 to prevent triggering the same ecall
 	 * again upon exiting the ISR.
 	 *
-	 * It's safe to always increment by 4, even with compressed
+	 * It is safe to always increment by 4, even with compressed
 	 * instructions, because the ecall instruction is always 4 bytes.
 	 */
 	lw t0, __NANO_ESF_mepc_OFFSET(sp)
@@ -175,15 +177,24 @@ is_syscall:
 	 * If NULL, jump to reschedule to perform a context-switch, otherwise,
 	 * jump to is_interrupt to handle the IRQ offload.
 	 */
-	la t0, _offload_routine
-	lw t1, 0x00(t0)
+	call z_irq_get_offload
+	mv t1, a0
 	bnez t1, is_interrupt
 #endif
 
+#ifndef CONFIG_SMP
 	/*
 	 * Go to reschedule to handle context-switch
 	 */
 	j reschedule
+
+#else
+	/* in smp mode, this is impossible */
+
+dead:
+	j dead
+
+#endif
 
 is_interrupt:
 	/*
@@ -191,12 +202,32 @@ is_interrupt:
 	 * stack pointer to interrupt stack.
 	 */
 
+#ifndef CONFIG_SMP
+
 	/* Save thread stack pointer to temp register t0 */
 	addi t0, sp, 0
 
 	/* Switch to interrupt stack */
 	la t2, _kernel
 	lw sp, _kernel_offset_to_irq_stack(t2)
+
+#else
+
+	/* t1 is saved as _offload_routine */
+	addi sp, sp, -16
+	sw t1, 0(sp)
+	call riscv_get_curr_cpu
+	lw t1, 0(sp)
+	addi sp, sp, 16
+
+	/* Save thread stack pointer to temp register t0 */
+	mv t0, sp
+
+	/* Switch to interrupt stack */
+	mv t2, a0
+	lw sp, ___cpu_t_irq_stack_OFFSET(t2)
+
+#endif
 
 	/*
 	 * Save thread stack pointer on interrupt stack
@@ -207,9 +238,9 @@ is_interrupt:
 
 on_irq_stack:
 	/* Increment _kernel.nested variable */
-	lw t3, _kernel_offset_to_nested(t2)
+	lw t3, ___cpu_t_nested_OFFSET(t2)
 	addi t3, t3, 1
-	sw t3, _kernel_offset_to_nested(t2)
+	sw t3, ___cpu_t_nested_OFFSET(t2)
 
 	/*
 	 * If we are here due to a system call, t1 register should != 0.
@@ -268,13 +299,23 @@ call_irq:
 	jalr ra, t1
 
 on_thread_stack:
+
+#ifndef CONFIG_SMP
+
 	/* Get reference to _kernel */
 	la t1, _kernel
 
+#else
+
+	call riscv_get_curr_cpu
+	mv t1, a0
+
+#endif
+
 	/* Decrement _kernel.nested variable */
-	lw t2, _kernel_offset_to_nested(t1)
+	lw t2, ___cpu_t_nested_OFFSET(t1)
 	addi t2, t2, -1
-	sw t2, _kernel_offset_to_nested(t1)
+	sw t2, ___cpu_t_nested_OFFSET(t1)
 
 	/* Restore thread stack pointer */
 	lw t0, 0x00(sp)
@@ -282,10 +323,25 @@ on_thread_stack:
 
 #ifdef CONFIG_STACK_SENTINEL
 	call z_check_stack_sentinel
+
+#ifndef CONFIG_SMP
+
+	/* Get reference to _kernel */
 	la t1, _kernel
+
+#else
+
+	call riscv_get_curr_cpu
+	mv t1, a0
+
+#endif
+
 #endif
 
 #ifdef CONFIG_PREEMPT_ENABLED
+
+#ifndef CONFIG_SMP
+
 	/*
 	 * Check if we need to perform a reschedule
 	 */
@@ -299,11 +355,25 @@ on_thread_stack:
 	 */
 	lw t3, _kernel_offset_to_ready_q_cache(t1)
 	beq t3, t2, no_reschedule
+
+#else /* CONFIG_SMP */
+
+	addi a1, sp, -__SWITCH_HDL_max_OFFSET
+	mv a0, a1
+	call z_get_next_switch_handle
+	beq a1, a0, no_reschedule
+	j reschedule
+
+#endif
+
 #else
 	j no_reschedule
 #endif /* CONFIG_PREEMPT_ENABLED */
 
 reschedule:
+
+#ifndef CONFIG_SMP
+
 #if CONFIG_TRACING
 	call z_sys_trace_thread_switched_in
 #endif
@@ -411,7 +481,174 @@ reschedule:
 	addi sp, sp, __NANO_ESF_SIZEOF
 #endif
 
+#else   /* SMP */
+
+#if CONFIG_TRACING
+	addi sp, sp, -16__NANO_ESF_SIZEOF
+	sw a0, 0(sp)
+	sw a1, 4(sp)
+	call z_sys_trace_thread_switched_in
+	lw a0, 0(sp)
+	lw a1, 4(sp)
+	addi sp, sp, 16
+#endif
+
+#ifdef CONFIG_EXECUTION_BENCHMARKING
+	addi sp, sp, -__NANO_ESF_SIZEOF
+
+	sw ra, __NANO_ESF_ra_OFFSET(sp)
+	sw gp, __NANO_ESF_gp_OFFSET(sp)
+	sw tp, __NANO_ESF_tp_OFFSET(sp)
+	sw t0, __NANO_ESF_t0_OFFSET(sp)
+	sw t1, __NANO_ESF_t1_OFFSET(sp)
+	sw t2, __NANO_ESF_t2_OFFSET(sp)
+	sw t3, __NANO_ESF_t3_OFFSET(sp)
+	sw t4, __NANO_ESF_t4_OFFSET(sp)
+	sw t5, __NANO_ESF_t5_OFFSET(sp)
+	sw t6, __NANO_ESF_t6_OFFSET(sp)
+	sw a0, __NANO_ESF_a0_OFFSET(sp)
+	sw a1, __NANO_ESF_a1_OFFSET(sp)
+	sw a2, __NANO_ESF_a2_OFFSET(sp)
+	sw a3, __NANO_ESF_a3_OFFSET(sp)
+	sw a4, __NANO_ESF_a4_OFFSET(sp)
+	sw a5, __NANO_ESF_a5_OFFSET(sp)
+	sw a6, __NANO_ESF_a6_OFFSET(sp)
+	sw a7, __NANO_ESF_a7_OFFSET(sp)
+
+	call read_timer_start_of_swap
+
+	lw ra, __NANO_ESF_ra_OFFSET(sp)
+	lw gp, __NANO_ESF_gp_OFFSET(sp)
+	lw tp, __NANO_ESF_tp_OFFSET(sp)
+	lw t0, __NANO_ESF_t0_OFFSET(sp)
+	lw t1, __NANO_ESF_t1_OFFSET(sp)
+	lw t2, __NANO_ESF_t2_OFFSET(sp)
+	lw t3, __NANO_ESF_t3_OFFSET(sp)
+	lw t4, __NANO_ESF_t4_OFFSET(sp)
+	lw t5, __NANO_ESF_t5_OFFSET(sp)
+	lw t6, __NANO_ESF_t6_OFFSET(sp)
+	lw a0, __NANO_ESF_a0_OFFSET(sp)
+	lw a1, __NANO_ESF_a1_OFFSET(sp)
+	lw a2, __NANO_ESF_a2_OFFSET(sp)
+	lw a3, __NANO_ESF_a3_OFFSET(sp)
+	lw a4, __NANO_ESF_a4_OFFSET(sp)
+	lw a5, __NANO_ESF_a5_OFFSET(sp)
+	lw a6, __NANO_ESF_a6_OFFSET(sp)
+	lw a7, __NANO_ESF_a7_OFFSET(sp)
+
+	/* Release stack space */
+	addi sp, sp, __NANO_ESF_SIZEOF
+#endif
+
+	/* a0 is new switch handle, a1 is the old one */
+	addi t0, sp, __NANO_ESF_SIZEOF
+	addi sp, sp, -__SWITCH_HDL_max_OFFSET
+	sw t0, __SWITCH_HDL_sp_OFFSET(sp)
+	sw s0, __SWITCH_HDL_s0_OFFSET(sp)
+	sw s1, __SWITCH_HDL_s1_OFFSET(sp)
+	sw s2, __SWITCH_HDL_s2_OFFSET(sp)
+	sw s3, __SWITCH_HDL_s3_OFFSET(sp)
+	sw s4, __SWITCH_HDL_s4_OFFSET(sp)
+	sw s5, __SWITCH_HDL_s5_OFFSET(sp)
+	sw s6, __SWITCH_HDL_s6_OFFSET(sp)
+	sw s7, __SWITCH_HDL_s7_OFFSET(sp)
+	sw s8, __SWITCH_HDL_s8_OFFSET(sp)
+	sw s9, __SWITCH_HDL_s9_OFFSET(sp)
+	sw s10, __SWITCH_HDL_s10_OFFSET(sp)
+	sw s11, __SWITCH_HDL_s11_OFFSET(sp)
+
+	/* restore new switch handle */
+
+	lw s0, __SWITCH_HDL_s0_OFFSET(a0)
+	lw s1, __SWITCH_HDL_s1_OFFSET(a0)
+	lw s2, __SWITCH_HDL_s2_OFFSET(a0)
+	lw s3, __SWITCH_HDL_s3_OFFSET(a0)
+	lw s4, __SWITCH_HDL_s4_OFFSET(a0)
+	lw s5, __SWITCH_HDL_s5_OFFSET(a0)
+	lw s6, __SWITCH_HDL_s6_OFFSET(a0)
+	lw s7, __SWITCH_HDL_s7_OFFSET(a0)
+	lw s8, __SWITCH_HDL_s8_OFFSET(a0)
+	lw s9, __SWITCH_HDL_s9_OFFSET(a0)
+	lw s10, __SWITCH_HDL_s10_OFFSET(a0)
+	lw s11, __SWITCH_HDL_s11_OFFSET(a0)
+	lw sp, __SWITCH_HDL_sp_OFFSET(a0)
+	addi a0, a0, __SWITCH_HDL_max_OFFSET
+	lw t0, __NANO_ESF_mepc_OFFSET(a0)
+	csrw mepc, t0
+	lw t0, __NANO_ESF_mstatus_OFFSET(a0)
+	csrw mstatus, t0
+	lw ra, __NANO_ESF_ra_OFFSET(a0)
+	lw gp, __NANO_ESF_gp_OFFSET(a0)
+	lw tp, __NANO_ESF_tp_OFFSET(a0)
+	lw t0, __NANO_ESF_t0_OFFSET(a0)
+	lw t1, __NANO_ESF_t1_OFFSET(a0)
+	lw t2, __NANO_ESF_t2_OFFSET(a0)
+	lw t3, __NANO_ESF_t3_OFFSET(a0)
+	lw t4, __NANO_ESF_t4_OFFSET(a0)
+	lw t5, __NANO_ESF_t5_OFFSET(a0)
+	lw t6, __NANO_ESF_t6_OFFSET(a0)
+	lw a1, __NANO_ESF_a1_OFFSET(a0)
+	lw a2, __NANO_ESF_a2_OFFSET(a0)
+	lw a3, __NANO_ESF_a3_OFFSET(a0)
+	lw a4, __NANO_ESF_a4_OFFSET(a0)
+	lw a5, __NANO_ESF_a5_OFFSET(a0)
+	lw a6, __NANO_ESF_a6_OFFSET(a0)
+	lw a7, __NANO_ESF_a7_OFFSET(a0)
+	lw a0, __NANO_ESF_a0_OFFSET(a0)
+
+#ifdef CONFIG_EXECUTION_BENCHMARKING
+	addi sp, sp, -__NANO_ESF_SIZEOF
+
+	sw ra, __NANO_ESF_ra_OFFSET(sp)
+	sw gp, __NANO_ESF_gp_OFFSET(sp)
+	sw tp, __NANO_ESF_tp_OFFSET(sp)
+	sw t0, __NANO_ESF_t0_OFFSET(sp)
+	sw t1, __NANO_ESF_t1_OFFSET(sp)
+	sw t2, __NANO_ESF_t2_OFFSET(sp)
+	sw t3, __NANO_ESF_t3_OFFSET(sp)
+	sw t4, __NANO_ESF_t4_OFFSET(sp)
+	sw t5, __NANO_ESF_t5_OFFSET(sp)
+	sw t6, __NANO_ESF_t6_OFFSET(sp)
+	sw a0, __NANO_ESF_a0_OFFSET(sp)
+	sw a1, __NANO_ESF_a1_OFFSET(sp)
+	sw a2, __NANO_ESF_a2_OFFSET(sp)
+	sw a3, __NANO_ESF_a3_OFFSET(sp)
+	sw a4, __NANO_ESF_a4_OFFSET(sp)
+	sw a5, __NANO_ESF_a5_OFFSET(sp)
+	sw a6, __NANO_ESF_a6_OFFSET(sp)
+	sw a7, __NANO_ESF_a7_OFFSET(sp)
+
+	call read_timer_end_of_swap
+
+	lw ra, __NANO_ESF_ra_OFFSET(sp)
+	lw gp, __NANO_ESF_gp_OFFSET(sp)
+	lw tp, __NANO_ESF_tp_OFFSET(sp)
+	lw t0, __NANO_ESF_t0_OFFSET(sp)
+	lw t1, __NANO_ESF_t1_OFFSET(sp)
+	lw t2, __NANO_ESF_t2_OFFSET(sp)
+	lw t3, __NANO_ESF_t3_OFFSET(sp)
+	lw t4, __NANO_ESF_t4_OFFSET(sp)
+	lw t5, __NANO_ESF_t5_OFFSET(sp)
+	lw t6, __NANO_ESF_t6_OFFSET(sp)
+	lw a0, __NANO_ESF_a0_OFFSET(sp)
+	lw a1, __NANO_ESF_a1_OFFSET(sp)
+	lw a2, __NANO_ESF_a2_OFFSET(sp)
+	lw a3, __NANO_ESF_a3_OFFSET(sp)
+	lw a4, __NANO_ESF_a4_OFFSET(sp)
+	lw a5, __NANO_ESF_a5_OFFSET(sp)
+	lw a6, __NANO_ESF_a6_OFFSET(sp)
+	lw a7, __NANO_ESF_a7_OFFSET(sp)
+
+	/* Release stack space */
+	addi sp, sp, __NANO_ESF_SIZEOF
+#endif
+
+	mret
+
+#endif
+
 no_reschedule:
+
 #ifdef CONFIG_RISCV_SOC_CONTEXT_SAVE
 	/* Restore context at SOC level */
 	addi a0, sp, __NANO_ESF_soc_context_OFFSET

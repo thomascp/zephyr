@@ -7,9 +7,10 @@
 #include <irq.h>
 #include <irq_offload.h>
 #include <misc/printk.h>
+#include <kernel_structs.h>
 
-volatile irq_offload_routine_t _offload_routine;
-static volatile void *offload_param;
+volatile irq_offload_routine_t _offload_routine[CONFIG_MP_NUM_CPUS];
+static volatile void *offload_param[CONFIG_MP_NUM_CPUS];
 
 /*
  * Called by _enter_irq
@@ -20,23 +21,32 @@ static volatile void *offload_param;
 void z_irq_do_offload(void)
 {
 	irq_offload_routine_t tmp;
+	unsigned int cpuid = z_arch_curr_cpu()->id;
 
-	if (!_offload_routine)
+	if (!_offload_routine[cpuid])
 		return;
 
-	tmp = _offload_routine;
-	_offload_routine = NULL;
+	tmp = _offload_routine[cpuid];
+	_offload_routine[cpuid] = NULL;
 
-	tmp((void *)offload_param);
+	tmp((void *)offload_param[cpuid]);
+}
+
+void z_irq_get_offload(void)
+{
+	unsigned int cpuid = z_arch_curr_cpu()->id;
+
+	return _offload_routine[cpuid];
 }
 
 void irq_offload(irq_offload_routine_t routine, void *parameter)
 {
 	unsigned int key;
+	unsigned int cpuid = z_arch_curr_cpu()->id;
 
 	key = irq_lock();
-	_offload_routine = routine;
-	offload_param = parameter;
+	_offload_routine[cpuid] = routine;
+	offload_param[cpuid] = parameter;
 
 	__asm__ volatile ("ecall");
 

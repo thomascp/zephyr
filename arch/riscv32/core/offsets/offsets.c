@@ -21,6 +21,8 @@
 #include <soc_context.h>
 #endif
 
+#ifndef CONFIG_SMP
+
 /* thread_arch_t member offsets */
 GEN_OFFSET_SYM(_thread_arch_t, swap_return_value);
 
@@ -38,6 +40,8 @@ GEN_OFFSET_SYM(_callee_saved_t, s8);
 GEN_OFFSET_SYM(_callee_saved_t, s9);
 GEN_OFFSET_SYM(_callee_saved_t, s10);
 GEN_OFFSET_SYM(_callee_saved_t, s11);
+
+#endif
 
 /* esf member offsets */
 GEN_OFFSET_SYM(NANO_ESF, ra);

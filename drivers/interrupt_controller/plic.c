@@ -13,6 +13,7 @@
 #include <kernel.h>
 #include <arch/cpu.h>
 #include <init.h>
+#include <kernel_structs.h>
 #include "plic.h"
 #include <sw_isr_table.h>
 
@@ -43,10 +44,15 @@ void riscv_plic_irq_enable(u32_t irq)
 	u32_t plic_irq = irq - RISCV_MAX_GENERIC_IRQ;
 	volatile u32_t *en =
 		(volatile u32_t *)DT_PLIC_IRQ_EN_BASE_ADDR;
+	int i;
 
 	key = irq_lock();
-	en += (plic_irq >> 5);
-	*en |= (1 << (plic_irq & 31));
+	for (i = 0; i < CONFIG_MP_NUM_CPUS; i++) {
+		en =
+			(volatile u32_t *)((i * 0x80) + DT_PLIC_IRQ_EN_BASE_ADDR); /*todo, 0x80*/
+		en += (plic_irq >> 5);
+		*en |= (1 << (plic_irq & 31));
+	}
 	irq_unlock(key);
 }
 
@@ -69,10 +75,15 @@ void riscv_plic_irq_disable(u32_t irq)
 	u32_t plic_irq = irq - RISCV_MAX_GENERIC_IRQ;
 	volatile u32_t *en =
 		(volatile u32_t *)DT_PLIC_IRQ_EN_BASE_ADDR;
+	int i;
 
 	key = irq_lock();
-	en += (plic_irq >> 5);
-	*en &= ~(1 << (plic_irq & 31));
+	for (i = 0; i < CONFIG_MP_NUM_CPUS; i++) {
+		en =
+			(volatile u32_t *)((i * 0x80) + DT_PLIC_IRQ_EN_BASE_ADDR); /*todo, 0x80*/
+		en += (plic_irq >> 5);
+		*en &= ~(1 << (plic_irq & 31));
+	}
 	irq_unlock(key);
 }
 
@@ -143,7 +154,11 @@ static void plic_irq_handler(void *arg)
 		(volatile struct plic_regs_t *)DT_PLIC_REG_BASE_ADDR;
 
 	u32_t irq;
+	u32_t id = z_arch_curr_cpu()->id;
 	struct _isr_table_entry *ite;
+
+	regs =
+		(volatile struct plic_regs_t *)((id * 0x1000) + DT_PLIC_REG_BASE_ADDR); /*todo, 0x1000*/
 
 	/* Get the IRQ number generating the interrupt */
 	irq = regs->claim_complete;
@@ -192,11 +207,17 @@ static int plic_init(struct device *dev)
 	volatile struct plic_regs_t *regs =
 		(volatile struct plic_regs_t *)DT_PLIC_REG_BASE_ADDR;
 	int i;
+	int j;
 
 	/* Ensure that all interrupts are disabled initially */
-	for (i = 0; i < PLIC_EN_SIZE; i++) {
-		*en = 0U;
-		en++;
+
+	for (i = 0; i < CONFIG_MP_NUM_CPUS; i++) {
+		en =
+			(volatile u32_t *)((i * 0x80) + DT_PLIC_IRQ_EN_BASE_ADDR); /*todo, 0x80*/
+		for (j = 0; j < PLIC_EN_SIZE; j++) {
+			*en = 0U;
+			en++;
+		}
 	}
 
 	/* Set priority of each interrupt line to 0 initially */
@@ -206,7 +227,11 @@ static int plic_init(struct device *dev)
 	}
 
 	/* Set threshold priority to 0 */
-	regs->threshold_prio = 0U;
+	for (i = 0; i < CONFIG_MP_NUM_CPUS; i++) {
+		regs =
+			(volatile struct plic_regs_t *)((i * 0x1000) + DT_PLIC_REG_BASE_ADDR); /*todo, 0x1000*/
+		regs->threshold_prio = 0U;
+	}
 
 	/* Setup IRQ handler for PLIC driver */
 	IRQ_CONNECT(RISCV_MACHINE_EXT_IRQ,

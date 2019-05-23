@@ -27,9 +27,11 @@ void k_cpu_atomic_idle(unsigned int key);
 
 static ALWAYS_INLINE void kernel_arch_init(void)
 {
-	_kernel.irq_stack =
+	_kernel.cpus[0].irq_stack =
 		Z_THREAD_STACK_BUFFER(_interrupt_stack) + CONFIG_ISR_STACK_SIZE;
 }
+
+#ifndef CONFIG_SMP
 
 static ALWAYS_INLINE void
 z_set_thread_return_value(struct k_thread *thread, unsigned int value)
@@ -37,14 +39,32 @@ z_set_thread_return_value(struct k_thread *thread, unsigned int value)
 	thread->arch.swap_return_value = value;
 }
 
+#define z_is_in_isr() (_kernel.nested != 0U)
+
+#endif
+
 FUNC_NORETURN void z_NanoFatalErrorHandler(unsigned int reason,
 					  const NANO_ESF *esf);
 
-
-#define z_is_in_isr() (_kernel.nested != 0U)
-
 #ifdef CONFIG_IRQ_OFFLOAD
 int z_irq_do_offload(void);
+#endif
+
+#ifdef CONFIG_SMP
+
+#define z_is_in_isr() (z_arch_curr_cpu()->nested != 0)
+
+void z_arch_switch(void *switch_to, void **switched_from);
+
+static inline struct _cpu *z_arch_curr_cpu(void)
+{
+	unsigned long cpuid;
+
+	__asm__ volatile("csrr %0, mhartid" : "=r"(cpuid));
+
+	return &_kernel.cpus[cpuid];
+}
+
 #endif
 
 #endif /* _ASMLANGUAGE */

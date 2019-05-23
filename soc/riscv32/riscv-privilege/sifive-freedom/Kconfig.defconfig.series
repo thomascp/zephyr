@@ -46,4 +46,10 @@ config RISCV_RAM_SIZE
 	hex
 	default 0x4000
 
+config SMP
+	default y
+
+config USE_SWITCH
+	default y
+
 endif # SOC_SERIES_RISCV32_SIFIVE_FREEDOM

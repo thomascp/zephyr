@@ -21,17 +21,22 @@ static u64_t last_count;
 
 static void set_mtimecmp(u64_t time)
 {
-	volatile u32_t *r = (u32_t *)RISCV_MTIMECMP_BASE;
+	volatile u32_t *base = (u32_t *)RISCV_MTIMECMP_BASE;
+	volatile u32_t *r;
 
-	/* Per spec, the RISC-V MTIME/MTIMECMP registers are 64 bit,
-	 * but are NOT internally latched for multiword transfers.  So
-	 * we have to be careful about sequencing to avoid triggering
-	 * spurious interrupts: always set the high word to a max
-	 * value first.
-	 */
-	r[1] = 0xffffffff;
-	r[0] = (u32_t)time;
-	r[1] = (u32_t)(time >> 32);
+	for (int i = 0; i < CONFIG_MP_NUM_CPUS; i++) {
+			r = (volatile u32_t *)((char *)base +  2 * sizeof (u32_t) * i);
+
+			/* Per spec, the RISC-V MTIME/MTIMECMP registers are 64 bit,
+			* but are NOT internally latched for multiword transfers.  So
+			* we have to be careful about sequencing to avoid triggering
+			* spurious interrupts: always set the high word to a max
+			* value first.
+			*/
+			r[1] = 0xffffffff;
+			r[0] = (u32_t)time;
+			r[1] = (u32_t)(time >> 32);
+		}
 }
 
 static u64_t mtime(void)
@@ -68,7 +73,7 @@ static void timer_isr(void *arg)
 	}
 
 	k_spin_unlock(&lock, key);
-	z_clock_announce(IS_ENABLED(CONFIG_TICKLESS_KERNEL) ? dticks : 1);
+	z_clock_announce(dticks);
 }
 
 int z_clock_driver_init(struct device *device)
@@ -77,6 +82,11 @@ int z_clock_driver_init(struct device *device)
 	set_mtimecmp(mtime() + CYC_PER_TICK);
 	irq_enable(RISCV_MACHINE_TIMER_IRQ);
 	return 0;
+}
+
+void smp_timer_init(void)
+{
+	irq_enable(RISCV_MACHINE_TIMER_IRQ);
 }
 
 void z_clock_set_timeout(s32_t ticks, bool idle)

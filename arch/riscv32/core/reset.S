@@ -6,6 +6,7 @@
  */
 
 #include <kernel_structs.h>
+#include <offsets_short_arch.h>
 
 /* exports */
 GTEXT(__initialize)
@@ -31,6 +32,10 @@ SECTION_FUNC(reset, __reset)
  * the C domain
  */
 SECTION_FUNC(TEXT, __initialize)
+
+	csrr t0, mhartid
+	bnez t0, nb_core
+
 #ifdef CONFIG_INIT_STACKS
 	/* Pre-populate all bytes in _interrupt_stack with 0xAA */
 	la t0, _interrupt_stack
@@ -62,3 +67,34 @@ aa_loop:
 	 * and then enters kernel z_cstart
 	 */
 	call _PrepC
+
+nb_core:
+
+	mv t1, t0
+	la t2, cpu_init
+
+calc_again:
+
+	beqz t1, calc_finish
+	addi t2, t2, SMP_CPU_INIT_SIZE
+	addi t1, t1, -1
+	j calc_again
+
+calc_finish:
+
+	/*
+	 * volatile struct {
+	 * void (*fn)(int, void*);
+	 * void *arg;
+     * void *sp;
+	 * }
+	 */
+
+	lw t1, 0(t2)
+	beqz t1, calc_finish
+
+	addi t2, t2, RISCV_REG_SIZE
+	lw a1, 0(t2)
+	addi t2, t2, RISCV_REG_SIZE
+	lw sp, 0(t2)
+	jalr t1

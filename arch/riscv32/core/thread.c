@@ -9,6 +9,8 @@
 #include <kernel_structs.h>
 #include <wait_q.h>
 #include <string.h>
+#include <offsets_short.h>
+#include <kernel_arch_thread.h>
 
 void z_thread_entry_wrapper(k_thread_entry_t thread,
 			   void *arg1,
@@ -22,6 +24,7 @@ void z_new_thread(struct k_thread *thread, k_thread_stack_t *stack,
 {
 	char *stack_memory = Z_THREAD_STACK_BUFFER(stack);
 	Z_ASSERT_VALID_PRIO(priority, thread_func);
+	char *stack_sp;
 
 	struct __esf *stack_init;
 
@@ -63,5 +66,17 @@ void z_new_thread(struct k_thread *thread, k_thread_stack_t *stack,
 	stack_init->mstatus = SOC_MSTATUS_DEF_RESTORE;
 	stack_init->mepc = (u32_t)z_thread_entry_wrapper;
 
+#ifndef CONFIG_SMP
+
 	thread->callee_saved.sp = (u32_t)stack_init;
+
+#else
+
+	stack_sp = stack_init;
+	stack_sp -= __SWITCH_HDL_max_OFFSET;
+	*(unsigned long *)(stack_sp + __SWITCH_HDL_sp_OFFSET) = \
+						(unsigned long)stack_memory + stack_size;
+	thread->switch_handle = stack_sp;
+
+#endif
 }

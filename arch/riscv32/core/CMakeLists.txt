@@ -5,6 +5,7 @@ zephyr_sources(
   fatal.c
   irq_manage.c
   irq_offload.c
+  smp.c
   isr.S
   prep_c.c
   reset.S
