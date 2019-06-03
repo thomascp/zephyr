@@ -1,9 +1,13 @@
 Hi all,
 
 This repo was added riscv32/riscv64 SMP support for zephyr.
-The support is a quick one, so only support limited features.
+
+The support is a quick one which based on v1.14-branch, so only support limited features.
+
 It is only tested on renode simulator sifive-fe310 and hifive-unleashed model.
+
 Renode dir is the configuration of renode tools, some are modified for this quick support.
+
 
 Some useful script:
 
