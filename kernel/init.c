@@ -144,10 +144,10 @@ extern void idle(void *unused1, void *unused2, void *unused3);
 void z_bss_zero(void)
 {
 	(void)memset(&__bss_start, 0,
-		     ((u32_t) &__bss_end - (u32_t) &__bss_start));
+		     ((pointer_t) &__bss_end - (pointer_t) &__bss_start));
 #ifdef DT_CCM_BASE_ADDRESS
 	(void)memset(&__ccm_bss_start, 0,
-		     ((u32_t) &__ccm_bss_end - (u32_t) &__ccm_bss_start));
+		     ((pointer_t) &__ccm_bss_end - (pointer_t) &__ccm_bss_start));
 #endif
 #ifdef CONFIG_CODE_DATA_RELOCATION
 	extern void bss_zeroing_relocation(void);
@@ -156,12 +156,12 @@ void z_bss_zero(void)
 #endif	/* CONFIG_CODE_DATA_RELOCATION */
 #ifdef CONFIG_COVERAGE_GCOV
 	(void)memset(&__gcov_bss_start, 0,
-		 ((u32_t) &__gcov_bss_end - (u32_t) &__gcov_bss_start));
+		 ((pointer_t) &__gcov_bss_end - (pointer_t) &__gcov_bss_start));
 #endif
 }
 
 #ifdef CONFIG_STACK_CANARIES
-extern volatile uintptr_t __stack_chk_guard;
+extern volatile pointer_t __stack_chk_guard;
 #endif /* CONFIG_STACK_CANARIES */
 
 

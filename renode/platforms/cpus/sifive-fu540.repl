@@ -1,0 +1,36 @@
+e51: CPU.RiscV64 @ sysbus
+    cpuType: "rv64imac"
+    hartId: 0
+    privilegeArchitecture: PrivilegeArchitecture.Priv1_10
+    clint: clint
+
+u54_1: CPU.RiscV64 @ sysbus
+    cpuType: "rv64gc"
+    hartId: 1
+    privilegeArchitecture: PrivilegeArchitecture.Priv1_10
+    clint: clint
+
+clint: IRQControllers.CoreLevelInterruptor  @ sysbus 0x200000
+    frequency: 200000000
+    numberOfTargets: 2
+    [0, 1] -> e51@[3, 7]
+    [2, 3] -> u54_1@[3, 7]
+
+plic: IRQControllers.PlatformLevelInterruptController @ sysbus 0xc000000
+    [0-3] -> e51@[8-11]
+    [4-7] -> u54_1@[8-11]
+    numberOfSources: 53
+    numberOfTargets: 5
+    prioritiesEnabled : false
+
+uart0: UART.SiFive_UART @ sysbus 0x10010000
+    IRQ -> plic@4
+
+uart1: UART.SiFive_UART @ sysbus 0x10011000
+    IRQ -> plic@5
+
+gpio: GPIOPort.SiFive_GPIO @ sysbus 0x10060000
+
+ddr: Memory.MappedMemory @ sysbus 0x20000000
+    size: 0x10000000
+

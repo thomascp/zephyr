@@ -49,7 +49,7 @@ void riscv_plic_irq_enable(u32_t irq)
 	key = irq_lock();
 	for (i = 0; i < CONFIG_MP_NUM_CPUS; i++) {
 		en =
-			(volatile u32_t *)((i * 0x80) + DT_PLIC_IRQ_EN_BASE_ADDR); /*todo, 0x80*/
+			(volatile u32_t *)((i * 0x80) + (char *)DT_PLIC_IRQ_EN_BASE_ADDR); /*todo, 0x80*/
 		en += (plic_irq >> 5);
 		*en |= (1 << (plic_irq & 31));
 	}
@@ -80,7 +80,7 @@ void riscv_plic_irq_disable(u32_t irq)
 	key = irq_lock();
 	for (i = 0; i < CONFIG_MP_NUM_CPUS; i++) {
 		en =
-			(volatile u32_t *)((i * 0x80) + DT_PLIC_IRQ_EN_BASE_ADDR); /*todo, 0x80*/
+			(volatile u32_t *)((i * 0x80) + (char *)DT_PLIC_IRQ_EN_BASE_ADDR); /*todo, 0x80*/
 		en += (plic_irq >> 5);
 		*en &= ~(1 << (plic_irq & 31));
 	}
@@ -111,7 +111,7 @@ int riscv_plic_irq_is_enabled(u32_t irq)
  * @brief Set priority of a riscv PLIC-specific interrupt line
  *
  * This routine set the priority of a RISCV PLIC-specific interrupt line.
- * riscv_plic_irq_set_prio is called by riscv32 Z_ARCH_IRQ_CONNECT to set
+ * riscv_plic_irq_set_prio is called by riscv Z_ARCH_IRQ_CONNECT to set
  * the priority of an interrupt whenever CONFIG_RISCV_HAS_PLIC variable is set.
  * @param irq IRQ number for which to set priority
  *
@@ -158,7 +158,7 @@ static void plic_irq_handler(void *arg)
 	struct _isr_table_entry *ite;
 
 	regs =
-		(volatile struct plic_regs_t *)((id * 0x1000) + DT_PLIC_REG_BASE_ADDR); /*todo, 0x1000*/
+		(volatile struct plic_regs_t *)((id * 0x1000) + (char *)DT_PLIC_REG_BASE_ADDR); /*todo, 0x1000*/
 
 	/* Get the IRQ number generating the interrupt */
 	irq = regs->claim_complete;
@@ -213,7 +213,7 @@ static int plic_init(struct device *dev)
 
 	for (i = 0; i < CONFIG_MP_NUM_CPUS; i++) {
 		en =
-			(volatile u32_t *)((i * 0x80) + DT_PLIC_IRQ_EN_BASE_ADDR); /*todo, 0x80*/
+			(volatile u32_t *)((i * 0x80) + (char *)DT_PLIC_IRQ_EN_BASE_ADDR); /*todo, 0x80*/
 		for (j = 0; j < PLIC_EN_SIZE; j++) {
 			*en = 0U;
 			en++;
@@ -229,7 +229,7 @@ static int plic_init(struct device *dev)
 	/* Set threshold priority to 0 */
 	for (i = 0; i < CONFIG_MP_NUM_CPUS; i++) {
 		regs =
-			(volatile struct plic_regs_t *)((i * 0x1000) + DT_PLIC_REG_BASE_ADDR); /*todo, 0x1000*/
+			(volatile struct plic_regs_t *)((i * 0x1000) + (char *)DT_PLIC_REG_BASE_ADDR); /*todo, 0x1000*/
 		regs->threshold_prio = 0U;
 	}
 

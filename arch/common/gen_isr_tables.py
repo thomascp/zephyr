@@ -71,7 +71,7 @@ def read_intlist(intlist_path):
     prefix = endian_prefix()
 
     intlist_header_fmt = prefix + "II"
-    intlist_entry_fmt = prefix + "iiII"
+    intlist_entry_fmt = prefix + "iiQQ"
 
     with open(intlist_path, "rb") as fp:
         intdata = fp.read()
@@ -295,7 +295,8 @@ def main():
                     debug('IRQ_Indx = ' + str(irq1))
                     debug('IRQ_Pos  = ' + str(irq1))
                     table_index = irq1 - offset
-
+            if len(swt) <= table_index :
+                error("wrong here %d" % (table_index))
             if swt[table_index] != (0, spurious_handler):
                 error("multiple registrations at table_index %d for irq %d (0x%x)" % (table_index, irq, irq))
 

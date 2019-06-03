@@ -1,5 +1,5 @@
 tests:
   kernel.profiling:
-    arch_exclude: nios2 riscv32
+    arch_exclude: nios2 riscv
     platform_exclude: em_starterkit
     tags: kernel

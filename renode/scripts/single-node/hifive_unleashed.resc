@@ -1,0 +1,17 @@
+$name?="hifive-unleashed"
+
+using sysbus
+mach create $name
+machine LoadPlatformDescription @platforms/cpus/sifive-fu540.repl
+
+showAnalyzer uart0
+
+$bin?=@/home/neo/zephyr/zephyr/samples/hello_world/build/zephyr/zephyr.elf
+
+sysbus LoadELF $bin
+
+sysbus.e51 StartGdbServer 1234
+sysbus.u54_1 StartGdbServer 1235
+
+e51 PC `sysbus GetSymbolAddress "__start"`
+u54_1 PC `sysbus GetSymbolAddress "__start"`

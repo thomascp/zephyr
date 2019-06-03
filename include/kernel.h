@@ -2466,7 +2466,7 @@ void k_stack_cleanup(struct k_stack *stack);
  * @return N/A
  * @req K-STACK-001
  */
-__syscall void k_stack_push(struct k_stack *stack, u32_t data);
+__syscall void k_stack_push(struct k_stack *stack, pointer_t data);
 
 /**
  * @brief Pop an element from a stack.
@@ -2486,7 +2486,7 @@ __syscall void k_stack_push(struct k_stack *stack, u32_t data);
  * @retval -EAGAIN Waiting period timed out.
  * @req K-STACK-001
  */
-__syscall int k_stack_pop(struct k_stack *stack, u32_t *data, s32_t timeout);
+__syscall int k_stack_pop(struct k_stack *stack, pointer_t *data, s32_t timeout);
 
 /**
  * @brief Statically define and initialize a stack

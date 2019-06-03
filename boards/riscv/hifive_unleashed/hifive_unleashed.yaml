@@ -1,0 +1,11 @@
+identifier: hifive_unleashed
+name: SiFive HiFive Unleashed
+type: mcu
+arch: riscv
+toolchain:
+  - zephyr
+ram: 16
+testing:
+  ignore_tags:
+    - net
+    - bluetooth

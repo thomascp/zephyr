@@ -25,7 +25,7 @@ static struct rbnode *get_child(struct rbnode *n, int side)
 		return n->children[1];
 	}
 
-	uintptr_t l = (uintptr_t) n->children[0];
+	pointer_t l = (pointer_t) n->children[0];
 
 	l &= ~1UL;
 	return (struct rbnode *) l;
@@ -37,8 +37,8 @@ static void set_child(struct rbnode *n, int side, void *val)
 	if (side != 0) {
 		n->children[1] = val;
 	} else {
-		uintptr_t old = (uintptr_t) n->children[0];
-		uintptr_t new = (uintptr_t) val;
+		pointer_t old = (pointer_t) n->children[0];
+		pointer_t new = (pointer_t) val;
 
 		n->children[0] = (void *) (new | (old & 1UL));
 	}
@@ -47,7 +47,7 @@ static void set_child(struct rbnode *n, int side, void *val)
 static enum rb_color get_color(struct rbnode *n)
 {
 	CHECK(n);
-	return ((uintptr_t)n->children[0]) & 1UL;
+	return ((pointer_t)n->children[0]) & 1UL;
 }
 
 static bool is_black(struct rbnode *n)
@@ -64,7 +64,7 @@ static void set_color(struct rbnode *n, enum rb_color color)
 {
 	CHECK(n);
 
-	uintptr_t *p = (void *) &n->children[0];
+	pointer_t *p = (void *) &n->children[0];
 
 	*p = (*p & ~1UL) | (uint8_t)color;
 }

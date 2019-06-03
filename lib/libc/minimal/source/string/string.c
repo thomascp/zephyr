@@ -240,11 +240,11 @@ void *memcpy(void *_MLIBC_RESTRICT d, const void *_MLIBC_RESTRICT s, size_t n)
 	unsigned char *d_byte = (unsigned char *)d;
 	const unsigned char *s_byte = (const unsigned char *)s;
 
-	if ((((unsigned int)d ^ (unsigned int)s_byte) & 0x3) == 0U) {
+	if ((((unsigned long)d ^ (unsigned long)s_byte) & 0x3) == 0U) {
 
 		/* do byte-sized copying until word-aligned or finished */
 
-		while (((unsigned int)d_byte) & 0x3) {
+		while (((unsigned long)d_byte) & 0x3) {
 			if (n == 0) {
 				return d;
 			}
@@ -290,7 +290,7 @@ void *memset(void *buf, int c, size_t n)
 	unsigned char *d_byte = (unsigned char *)buf;
 	unsigned char c_byte = (unsigned char)c;
 
-	while (((unsigned int)d_byte) & 0x3) {
+	while (((unsigned long)d_byte) & 0x3) {
 		if (n == 0) {
 			return buf;
 		}

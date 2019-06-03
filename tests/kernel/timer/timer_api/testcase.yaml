@@ -4,5 +4,5 @@ tests:
   kernel.timer.tickless:
     build_only: true
     extra_args: CONF_FILE="prj_tickless.conf"
-    arch_exclude: riscv32 nios2 posix
+    arch_exclude: riscv nios2 posix
     tags: kernel

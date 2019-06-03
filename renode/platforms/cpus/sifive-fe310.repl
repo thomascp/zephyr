@@ -1,0 +1,42 @@
+maskRom: Memory.MappedMemory @sysbus 0x1000
+    size: 0x1000
+
+otp: Memory.MappedMemory @sysbus 0x20000
+    size: 0x2000
+
+dtim: Memory.MappedMemory @ sysbus 0x80000000
+    size: 0x4000
+
+uart0: UART.SiFive_UART @ sysbus 0x10013000
+    IRQ -> plic@3
+
+uart1: UART.SiFive_UART @ sysbus 0x10023000
+    IRQ -> plic@4
+
+cpu0: CPU.RiscV32 @ sysbus
+    cpuType: "rv32imac"
+    hartId: 0
+    clint: clint
+
+cpu1: CPU.RiscV32 @ sysbus
+    cpuType: "rv32imac"
+    hartId: 1
+    clint: clint
+
+plic: IRQControllers.PlatformLevelInterruptController @ sysbus 0x0C000000
+    3 -> cpu0@11
+    7 -> cpu1@11
+    numberOfSources: 52
+    numberOfTargets: 2
+
+clint: IRQControllers.CoreLevelInterruptor  @ sysbus 0x02000000
+    [0,1] -> cpu0@[3,7]
+    [2,3] -> cpu1@[3,7]
+    frequency: 62000000
+    numberOfTargets: 2
+
+qspi0Xip: Memory.MappedMemory @ sysbus 0x20000000
+    size: 0x20000000
+
+gpioInputs: GPIOPort.SiFive_GPIO @  sysbus 0x10012000
+    [0-31] -> plic@[8-39]

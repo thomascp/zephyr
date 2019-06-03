@@ -8,7 +8,7 @@ set(arch_list
   arc
   arm
   nios2
-  riscv32
+  riscv
   posix
   x86
   x86_64

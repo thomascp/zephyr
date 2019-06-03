@@ -1,4 +1,4 @@
 tests:
   kernel.tickless:
-    arch_exclude: riscv32 nios2
+    arch_exclude: riscv nios2
     tags: kernel

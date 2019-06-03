@@ -44,8 +44,8 @@
  * #include <gen_offset.h>
  * /@ include struct definitions for which offsets symbols are to be
  * generated @/
- *
  * #include <kernel_structs.h>
+ *
  * GEN_ABS_SYM_BEGIN (_OffsetAbsSyms)	/@ the name parameter is arbitrary @/
  * /@ _kernel_t structure member offsets @/
  *

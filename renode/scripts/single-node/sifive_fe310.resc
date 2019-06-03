@@ -1,0 +1,24 @@
+:name: SiFive-FE310
+:description: This script runs Zephyr RTOS shell sample on SiFive-FE310 platform.
+
+$name?="SiFive-FE310"
+
+using sysbus
+mach create $name
+machine LoadPlatformDescription @platforms/cpus/sifive-fe310.repl
+
+$bin?=@/home/neo/zephyr/zephyr/samples/hello_world/build/zephyr/zephyr.elf
+:$bin?=@/home/neo/zephyr/zephyr/samples/basic/threads/build/zephyr/zephyr.elf
+:$bin?=@/home/neo/zephyr/workspace/hello_world/build/zephyr/zephyr.elf
+
+showAnalyzer uart0
+sysbus LoadELF $bin
+
+sysbus Tag <0x10008000 4> "PRCI_HFROSCCFG" 0xFFFFFFFF
+sysbus Tag <0x10008008 4> "PRCI_PLLCFG" 0xFFFFFFFF
+
+sysbus.cpu0 StartGdbServer 1234
+sysbus.cpu1 StartGdbServer 1235
+
+cpu0 PC `sysbus GetSymbolAddress "__start"`
+cpu0 PerformanceInMips 320

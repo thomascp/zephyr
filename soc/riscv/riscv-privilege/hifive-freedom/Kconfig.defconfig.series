@@ -1,0 +1,47 @@
+# SPDX-License-Identifier: Apache-2.0
+
+if SOC_SERIES_RISCV64_SIFIVE_FREEDOM
+
+config SOC_SERIES
+	string
+	default "hifive-freedom"
+
+config SYS_CLOCK_HW_CYCLES_PER_SEC
+	int
+	default 1000000
+
+config RISCV_SOC_INTERRUPT_INIT
+	bool
+	default y
+
+config RISCV_HAS_CPU_IDLE
+	bool
+	default y
+
+config RISCV_HAS_PLIC
+	bool
+	default y
+
+config NUM_IRQS
+	int
+	default 64
+
+config XIP
+	bool
+	default n
+
+config RISCV_RAM_BASE_ADDR
+	hex
+	default	0x20000000
+
+config RISCV_RAM_SIZE
+	hex
+	default 0x10000000
+
+config SMP
+	default y
+
+config USE_SWITCH
+	default y
+
+endif # SOC_SERIES_RISCV64_SIFIVE_FREEDOM

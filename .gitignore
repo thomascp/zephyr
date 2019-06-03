@@ -1,3 +1,4 @@
+zephyr.code-workspace
 *.o
 *.a
 *.d

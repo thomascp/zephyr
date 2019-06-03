@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: Apache-2.0
+
+if BOARD_HIFIVE_UNLEASHED
+
+config BOARD
+	default "hifive_unleashed"
+
+endif

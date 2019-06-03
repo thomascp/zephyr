@@ -96,7 +96,7 @@ void k_stack_cleanup(struct k_stack *stack)
 	}
 }
 
-void z_impl_k_stack_push(struct k_stack *stack, u32_t data)
+void z_impl_k_stack_push(struct k_stack *stack, pointer_t data)
 {
 	struct k_thread *first_pending_thread;
 	k_spinlock_key_t key;
@@ -136,7 +136,7 @@ Z_SYSCALL_HANDLER(k_stack_push, stack_p, data)
 }
 #endif
 
-int z_impl_k_stack_pop(struct k_stack *stack, u32_t *data, s32_t timeout)
+int z_impl_k_stack_pop(struct k_stack *stack, pointer_t *data, s32_t timeout)
 {
 	k_spinlock_key_t key;
 	int result;
@@ -160,7 +160,7 @@ int z_impl_k_stack_pop(struct k_stack *stack, u32_t *data, s32_t timeout)
 		return -EAGAIN;
 	}
 
-	*data = (u32_t)_current->base.swap_data;
+	*data = (pointer_t)_current->base.swap_data;
 	return 0;
 }
 

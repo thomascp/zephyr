@@ -32,7 +32,7 @@ extern "C" {
 #define LOG_MSG_NARGS_SINGLE_CHUNK 3
 
 /** @brief Number of arguments in the head of extended standard log message..*/
-#define LOG_MSG_NARGS_HEAD_CHUNK (LOG_MSG_NARGS_SINGLE_CHUNK - 1)
+#define LOG_MSG_NARGS_HEAD_CHUNK (LOG_MSG_NARGS_SINGLE_CHUNK - sizeof(void *)/4)
 
 /** @brief Maximal amount of bytes in the hexdump entry which fits in one chunk.
  */
@@ -128,6 +128,7 @@ union log_msg_head_data {
 };
 
 /** @brief Data part of extended log message. */
+#pragma pack(push, 4) 
 struct log_msg_ext_head_data {
 	struct log_msg_cont *next;
 	union log_msg_ext_head_data_data {
@@ -135,6 +136,7 @@ struct log_msg_ext_head_data {
 		u8_t bytes[LOG_MSG_HEXDUMP_BYTES_HEAD_CHUNK];
 	} data;
 };
+#pragma pack(pop)
 
 /** @brief Log message structure. */
 struct log_msg {
