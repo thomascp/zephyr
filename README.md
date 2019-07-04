@@ -24,4 +24,4 @@ include @scripts/single-node/hifive_unleashed.resc
 
 BR, Peng
 
-![opps](.zephyr_rv64_1.jpg) ![opps](.zephyr_rv64_2.jpg)
+![opps](./zephyr_rv64_1.jpg) ![opps](./zephyr_rv64_2.jpg)
