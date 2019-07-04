@@ -25,5 +25,5 @@ include @scripts/single-node/hifive_unleashed.resc
 BR,
 Peng
 
-<img src="zephyr_rv64_1.jpg" width="50%" height="50%">
-<img src="zephyr_rv64_2.jpg" width="50%" height="50%">
+![opps](.zephyr_rv64_1.jpg)
+![opps](.zephyr_rv64_2.jpg)
